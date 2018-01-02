@@ -1,0 +1,170 @@
+[DEFAULT]
+
+[pipeline:main]
+# This is the minimum pipeline for Oss2swift.  See swift manual if you want to add
+# more middleware.
+#
+# Keystone pipeline
+# Note that osstoken and authtoken require the keystonemiddleware package.
+#pipeline = proxy-logging cache Oss2swift osstoken authtoken keystoneauth bulk slo proxy-logging proxy-server
+
+# Tempauth pipeline
+pipeline = proxy-logging cache oss2swift tempauth bulk slo proxy-logging proxy-server
+
+[app:proxy-server]
+use = egg:swift#proxy
+
+[filter:tempauth]
+# See swift manual for more details.
+use = egg:swift#tempauth
+user_admin_admin = admin .admin .reseller_admin
+user_test_tester = testing .admin
+user_test2_tester2 = testing2 .admin
+user_test_tester3 = testing3
+
+[filter:oss2swift]
+use = egg:oss2swift#oss2swift
+
+# Swift has no concept of the Oss's resource owner; the resources
+# (i.e. containers and objects) created via the Swift API have no owner
+# information. This option specifies how the oss2swift middleware handles them
+# with the Oss API.  If this option is 'false', such kinds of resources will be
+# invisible and no users can access them with the Oss API.  If set to 'true',
+# the resource without owner is belong to everyone and everyone can access it
+# with the Oss API.  If you care about Oss compatibility, set 'false' here.  This
+# option makes sense only when the oss_acl option is set to 'true' and your
+# Swift cluster has the resources created via the Swift API.
+# allow_no_owner = false
+#
+# Set a region name of your Swift cluster.  Note that oss2swift doesn't choose a
+# region of the newly created bucket actually.  This value is used for the
+# GET Bucket location API and  signatures calculation.
+location = oss-cn-hangzhou.aliyuncs.com
+#
+# Set whether to enforce DNS-compliant bucket names. Note that Oss enforces
+# these conventions in all regions except the oss-cn-hangzhou.aliyuncs.com Standard region.
+# dns_compliant_bucket_names = True
+#
+# Set the default maximum number of objects returned in the GET Bucket
+# response.
+max_bucket_listing = 1000
+#
+# Set the maximum number of parts returned in the List Parts operation.
+# (default: 1000)
+# When setting it to be larger than 10000, set to be larger
+# container_listing_limit in swift.conf.(specification of OSS: 1000)
+max_parts_listing = 1000
+#
+# Set the maximum number of objects we can delete with the Multi-Object Delete
+# operation.
+max_multi_delete_objects = 1000
+#
+# If set to 'true', Oss2swift uses its own metadata for ACL
+# (e.g. X-Container-Sysmeta-Oss-Acl) to achieve the best Oss compatibility.
+# If set to 'false', Oss2swift tries to use Swift ACL (e.g. X-Container-Read)
+# instead of Oss ACL as far as possible.  If you want to keep backward
+# compatibility with Oss2swift 1.7 or earlier, set false here
+# If set to 'false' after set to 'true' and put some container/object,
+# all users will be able to access container/object.
+# Note that oss_acl doesn't keep the acl consistency between Oss API and Swift
+# API. (e.g. when set ossacl to true and PUT acl, we won't get the acl
+# information via Swift API at all and the acl won't be applied against to
+# Swift API even if it is for a bucket currently supported.)
+# Note that oss_acl currently supports only keystone and tempauth.
+# DON'T USE THIS for production before enough testing for your use cases.
+# This stuff is still under development and it might cause something
+# you don't expect.
+oss_acl = false
+#
+# Specify a host name of your Swift cluster.  This enables virtual-hosted style
+# requests.
+storage_domain =
+#
+# Enable pipeline order check for SLO, osstoken, authtoken, keystoneauth according to
+# standard oss2swift/Swift construction using either tempauth or keystoneauth.
+# If the order is incorrect, it raises a except to stop proxy.
+# Turn auth_pipeline_check off only when you want to bypass these authenticate
+# middlewares in order to use other 3rd party (or your proprietary) authenticate middleware.
+# auth_pipeline_check = True
+#
+# Enable multi-part uploads. (default: true)
+# This is required to store files larger than Swift's max_file_size (by default, 5GiB).
+# Note that has performance implications when deleting objects, as we now have to
+# check for whether there are also segments to delete.
+# allow_multipart_uploads = True
+#
+# Set the maximum number of parts for Upload Part operation.(default: 1000)
+# When setting it to be larger than the default value in order to match the
+# specification of Oss, set to be larger max_manifest_segments for slo
+# middleware.(specification of Oss: 10000)
+# max_upload_part_num = 1000
+#
+# Enable returning only buckets which owner are the user who requested
+# GET Service operation. (default: false)
+# If you want to enable the above feature, set this and oss_acl to true.
+# That might cause significant performance degradation. So, only if your
+# service absolutely need this feature, set this setting to true.
+# If you set this to false, Oss2swift returns all buckets.
+# check_bucket_owner = false
+#
+# In default, Swift reports only Oss style access log.
+# (e.g. PUT /bucket/object) If set force_swift_request_proxy_log
+# to be 'true', Swift will become to output Swift style log
+# (e.g. PUT /v1/account/container/object) in addition to Oss style log.
+# Note that they will be reported twice (i.e. Oss2swift doesn't care about
+# the duplication) and Swift style log will includes also various subrequests
+# to achieve Oss compatibilities when force_swift_request_proxy_log is set to
+# 'true'
+# force_swift_request_proxy_log = false
+
+[filter:catch_errors]
+use = egg:swift#catch_errors
+
+[filter:proxy-logging]
+use = egg:swift#proxy_logging
+
+[filter:bulk]
+use = egg:swift#bulk
+
+[filter:slo]
+use = egg:swift#slo
+
+# Alibaba Oss document says that each part must be at least 5 MB in a multipart
+# upload, except the last part.
+min_segment_size = 5242880
+
+[filter:dlo]
+use = egg:swift#dlo
+
+[filter:cache]
+use = egg:swift#memcache
+
+[filter:osstoken]
+# See swift manual for more details.
+use = egg:oss2swift#osstoken
+
+# Prefix that will be prepended to the tenant to form the account
+reseller_prefix = AUTH_
+
+# Keystone server details
+auth_uri = http://keystonehost:35357/
+
+# SSL-related options
+#insecure = False
+#certfile =
+#keyfile =
+
+[filter:authtoken]
+# See swift manual for more details.
+paste.filter_factory = keystonemiddleware.auth_token:filter_factory
+identity_uri = http://keystonehost:35357/
+auth_uri = http://keystonehost:5000/
+admin_tenant_name = service
+admin_user = swift
+admin_password = password
+cache = swift.cache
+
+[filter:keystoneauth]
+# See swift manual for more details.
+use = egg:swift#keystoneauth
+operator_roles = admin, swiftoperator

@@ -1,0 +1,12 @@
+include AUTHORS LICENSE .unittests
+include CHANGELOG README.md
+include tox.ini
+include requirements.txt
+graft doc
+graft etc
+recursive-include oss2swift/schema *.rng
+recursive-include oss2swift/test *.py
+recursive-include oss2swift/test/functional/conf *.conf.in *.ini *.json
+include oss2swift/test/functional/setup_keystone
+include oss2swift/test/functional/oss2swift.config
+include oss2swift/test/functional/run_test.sh

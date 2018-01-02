@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grammar xmlns="http://relaxng.org/ns/structure/1.0">
+  <include href="common.rng"/>
+  <start>
+    <element name="WebsiteConfiguration">
+      <element name="IndexDocument">
+         <element name="Suffix"><text /></element>
+      </element>
+      <optional>
+         <element name="ErrorDocument">
+            <element name="Key"><text /></element>
+        </element>
+      </optional>
+    </element>
+  </start>
+</grammar>

@@ -1,0 +1,2 @@
+OSS2Swift Authentication Tool for Curl
+Copyright 2016 OStorage. All Rights Reserved. 

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grammar xmlns="http://relaxng.org/ns/structure/1.0">
+  <include href="common.rng"/>
+  <start>
+    <element name="RefererConfiguration">
+      <element name="AllowEmptyReferer">
+        <choice>
+          <value>true</value>
+          <value>false</value>
+        </choice>
+      </element>
+      <element name="RefererList">
+	<zeroOrMore>
+          <element name="Referer"><text /></element>
+        </zeroOrMore>
+      </element>
+    </element>
+  </start>
+</grammar>

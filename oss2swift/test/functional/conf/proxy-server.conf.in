@@ -1,0 +1,66 @@
+[DEFAULT]
+bind_port = 8080
+user = %USER%
+swift_dir = %TEST_DIR%/etc
+devices = %TEST_DIR%
+mount_check = false
+workers = 1
+account_autocreate = true
+log_level = DEBUG
+
+[pipeline:main]
+pipeline = catch_errors gatekeeper proxy-logging cache oss2swift %MIDDLEWARE% bulk slo dlo proxy-logging proxy-server
+
+[app:proxy-server]
+use = egg:swift#proxy
+
+[filter:tempauth]
+use = egg:swift#tempauth
+user_test_admin = admin .admin
+user_test_tester = testing .admin
+user_test_tester2 = testing2
+
+[filter:oss2swift]
+use = egg:oss2swift#oss2swift
+oss_acl = %OssACL%
+location = US
+
+[filter:catch_errors]
+use = egg:swift#catch_errors
+
+[filter:proxy-logging]
+use = egg:swift#proxy_logging
+
+[filter:bulk]
+use = egg:swift#bulk
+
+[filter:slo]
+use = egg:swift#slo
+min_segment_size = 4
+
+[filter:dlo]
+use = egg:swift#dlo
+
+[filter:gatekeeper]
+use = egg:swift#gatekeeper
+
+[filter:cache]
+use = egg:swift#memcache
+
+[filter:osstoken]
+use = egg:oss2swift#osstoken
+auth_uri = http://localhost:35357/
+
+[filter:authtoken]
+paste.filter_factory = keystonemiddleware.auth_token:filter_factory
+identity_uri = http://localhost:35357/
+auth_uri = http://localhost:5000/
+admin_tenant_name = service
+admin_user = swift
+admin_password = password
+cache = swift.cache
+
+[filter:keystoneauth]
+use = egg:swift#keystoneauth
+operator_roles = admin, swiftoperator
+reseller_admin_role = ResellerAdmin
